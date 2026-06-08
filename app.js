@@ -1,4 +1,29 @@
-let inspections = JSON.parse(localStorage.getItem("inspections") || "[]");
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAtINzRtBdHquXnYN-mEdhgSgk0txwIFq0",
+  authDomain: "dasan-facility-7592a.firebaseapp.com",
+  projectId: "dasan-facility-7592a",
+  storageBucket: "dasan-facility-7592a.firebasestorage.app",
+  messagingSenderId: "509516185174",
+  appId: "1:509516185174:web:7f058f6b64d3b3b84d45f7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const inspectionsRef = collection(db, "inspections");
+
+let inspections = [];
 let isAdmin = localStorage.getItem("isAdmin") === "true";
 const ADMIN_PASSWORD = "1234";
 
@@ -40,18 +65,33 @@ navButtons.forEach(btn => {
   });
 });
 
-form.addEventListener("submit", e => {
+onSnapshot(inspectionsRef, snapshot => {
+  inspections = snapshot.docs
+    .map(docItem => ({
+      firebaseId: docItem.id,
+      ...docItem.data()
+    }))
+    .filter(item => !item.test)
+    .sort((a, b) => {
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    });
+
+  renderAll();
+});
+
+form.addEventListener("submit", async e => {
   e.preventDefault();
 
   const formData = new FormData(form);
   const editId = form.dataset.editId;
 
   const oldItem = editId
-    ? inspections.find(item => item.id === Number(editId))
+    ? inspections.find(item => item.firebaseId === editId)
     : null;
 
   const item = {
-    id: editId ? Number(editId) : Date.now(),
     building: formData.get("building"),
     date: formData.get("date"),
     inspector: formData.get("inspector"),
@@ -60,28 +100,30 @@ form.addEventListener("submit", e => {
     status: formData.get("status"),
     memo: formData.get("memo") || "",
     completed: oldItem ? oldItem.completed : false,
-    processMemo: oldItem ? oldItem.processMemo || "" : ""
+    processMemo: oldItem ? oldItem.processMemo || "" : "",
+    updatedAt: serverTimestamp()
   };
 
-  if (editId) {
-    inspections = inspections.map(x =>
-      x.id === Number(editId) ? item : x
-    );
-    delete form.dataset.editId;
-    alert("수정되었습니다.");
-  } else {
-    inspections.push(item);
-    alert("등록되었습니다.");
+  try {
+    if (editId) {
+      await updateDoc(doc(db, "inspections", editId), item);
+      delete form.dataset.editId;
+      alert("수정되었습니다.");
+    } else {
+      await addDoc(inspectionsRef, {
+        ...item,
+        createdAt: serverTimestamp()
+      });
+      alert("등록되었습니다.");
+    }
+
+    form.reset();
+    goPage("history");
+  } catch (error) {
+    console.error(error);
+    alert("저장 중 오류가 발생했습니다.");
   }
-
-  saveData();
-  form.reset();
-  goPage("history");
 });
-
-function saveData() {
-  localStorage.setItem("inspections", JSON.stringify(inspections));
-}
 
 function goPage(pageName) {
   navButtons.forEach(b => b.classList.remove("active"));
@@ -109,7 +151,7 @@ function renderDashboard() {
     inspections.filter(x => x.status === "긴급" && !x.completed).length;
 
   document.getElementById("lastDate").textContent =
-    inspections.length ? inspections[inspections.length - 1].date : "-";
+    inspections.length ? inspections[0].date : "-";
 
   const buildings = ["본사", "물류센터1", "물류센터2", "서교동"];
   const cards = document.getElementById("buildingCards");
@@ -132,7 +174,7 @@ function renderDashboard() {
   document.getElementById("recentList").innerHTML =
     inspections.length === 0
       ? `<p>등록된 점검이 없습니다.</p>`
-      : inspections.slice().reverse().slice(0, 5).map(x => `
+      : inspections.slice(0, 5).map(x => `
           <div class="list-item">
             <strong>${x.building}</strong> ${x.date} / ${x.area} / ${x.status}
           </div>
@@ -147,13 +189,13 @@ function getFilteredList() {
   return inspections.filter(x =>
     (!building || x.building === building) &&
     (!status || x.status === status) &&
-    (!inspector || x.inspector.includes(inspector))
+    (!inspector || (x.inspector || "").includes(inspector))
   );
 }
 
 function renderHistory() {
   const tbody = document.getElementById("historyBody");
-  const list = getFilteredList().slice().reverse();
+  const list = getFilteredList();
 
   tbody.innerHTML = list.length === 0
     ? `<tr><td colspan="8">등록된 점검 이력이 없습니다.</td></tr>`
@@ -174,12 +216,12 @@ function renderHistory() {
 
           ${isAdmin ? `
             <br>
-            <button class="processBtn" data-id="${x.id}">처리내용 작성</button>
-            <button class="editBtn" data-id="${x.id}">수정</button>
-            <button class="deleteBtn" data-id="${x.id}">삭제</button>
+            <button class="processBtn" data-id="${x.firebaseId}">처리내용 작성</button>
+            <button class="editBtn" data-id="${x.firebaseId}">수정</button>
+            <button class="deleteBtn" data-id="${x.firebaseId}">삭제</button>
             ${x.completed
-              ? `<button class="cancelBtn" data-id="${x.id}">완료취소</button>`
-              : `<button class="completeBtn" data-id="${x.id}">완료처리</button>`
+              ? `<button class="cancelBtn" data-id="${x.firebaseId}">완료취소</button>`
+              : `<button class="completeBtn" data-id="${x.firebaseId}">완료처리</button>`
             }
           ` : ""}
         </td>
@@ -205,32 +247,31 @@ function renderRepairs() {
         <p><strong>처리내용:</strong> ${x.processMemo || "-"}</p>
 
         ${isAdmin ? `
-          <button class="processBtn" data-id="${x.id}">처리내용 작성</button>
+          <button class="processBtn" data-id="${x.firebaseId}">처리내용 작성</button>
           ${x.completed
-            ? `<button class="cancelBtn" data-id="${x.id}">완료취소</button>`
-            : `<button class="completeBtn" data-id="${x.id}">완료처리</button>`
+            ? `<button class="cancelBtn" data-id="${x.firebaseId}">완료취소</button>`
+            : `<button class="completeBtn" data-id="${x.firebaseId}">완료처리</button>`
           }
         ` : ""}
       </div>
     `).join("");
 }
 
-document.addEventListener("click", e => {
-  const id = Number(e.target.dataset.id);
+document.addEventListener("click", async e => {
+  const id = e.target.dataset.id;
+  if (!id) return;
 
   if (e.target.classList.contains("deleteBtn")) {
     if (!isAdmin) return alert("관리자만 삭제할 수 있습니다.");
     if (!confirm("정말 삭제하시겠습니까?")) return;
 
-    inspections = inspections.filter(x => x.id !== id);
-    saveData();
-    renderAll();
+    await deleteDoc(doc(db, "inspections", id));
   }
 
   if (e.target.classList.contains("editBtn")) {
     if (!isAdmin) return alert("관리자만 수정할 수 있습니다.");
 
-    const item = inspections.find(x => x.id === id);
+    const item = inspections.find(x => x.firebaseId === id);
     if (!item) return;
 
     form.elements["building"].value = item.building;
@@ -249,44 +290,39 @@ document.addEventListener("click", e => {
   if (e.target.classList.contains("processBtn")) {
     if (!isAdmin) return alert("관리자만 처리내용을 작성할 수 있습니다.");
 
-    const item = inspections.find(x => x.id === id);
+    const item = inspections.find(x => x.firebaseId === id);
     if (!item) return;
 
     const memo = prompt("처리내용을 입력하세요.", item.processMemo || "");
     if (memo === null) return;
 
-    inspections = inspections.map(x =>
-      x.id === id ? { ...x, processMemo: memo } : x
-    );
-
-    saveData();
-    renderAll();
+    await updateDoc(doc(db, "inspections", id), {
+      processMemo: memo,
+      updatedAt: serverTimestamp()
+    });
   }
 
   if (e.target.classList.contains("completeBtn")) {
     if (!isAdmin) return alert("관리자만 완료처리할 수 있습니다.");
 
-    const item = inspections.find(x => x.id === id);
+    const item = inspections.find(x => x.firebaseId === id);
     const memo = prompt("처리내용을 입력하세요.", item?.processMemo || "");
     if (memo === null) return;
 
-    inspections = inspections.map(x =>
-      x.id === id ? { ...x, completed: true, processMemo: memo } : x
-    );
-
-    saveData();
-    renderAll();
+    await updateDoc(doc(db, "inspections", id), {
+      completed: true,
+      processMemo: memo,
+      updatedAt: serverTimestamp()
+    });
   }
 
   if (e.target.classList.contains("cancelBtn")) {
     if (!isAdmin) return alert("관리자만 완료취소할 수 있습니다.");
 
-    inspections = inspections.map(x =>
-      x.id === id ? { ...x, completed: false } : x
-    );
-
-    saveData();
-    renderAll();
+    await updateDoc(doc(db, "inspections", id), {
+      completed: false,
+      updatedAt: serverTimestamp()
+    });
   }
 });
 
