@@ -1,23 +1,211 @@
-const buildings=['본사','물류센터1','물류센터2','서교동'];
-const KEY='facility_inspections_v1';
-let data=JSON.parse(localStorage.getItem(KEY)||'[]');
-if(data.length===0){data=[
-{id:crypto.randomUUID(),building:'물류센터1',date:'2026-06-02',inspector:'김주림',area:'3층 남측 외부',content:'크랙 발견(약 30cm). 소방설비 정상.',status:'긴급',repairStatus:'접수',repairMemo:''},
-{id:crypto.randomUUID(),building:'물류센터2',date:'2026-06-01',inspector:'김주림',area:'분전함',content:'점검 완료. 주차장 조명 2개 교체 필요.',status:'수리필요',repairStatus:'접수',repairMemo:''},
-{id:crypto.randomUUID(),building:'서교동',date:'2026-05-30',inspector:'김주림',area:'엘리베이터',content:'연간 정기점검 완료. 이상 없음.',status:'이상 없음',repairStatus:'완료',repairMemo:''}
-];save()}
-function save(){localStorage.setItem(KEY,JSON.stringify(data))}
-function statusClass(s){return s==='긴급'?'urgent':s==='수리필요'?'need':'ok'}
-function render(){renderDashboard();renderHistory();renderRepairs()}
-document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav,.page').forEach(e=>e.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.page).classList.add('active');render()});
-document.inspectionForm.date.valueAsDate=new Date();
-document.getElementById('inspectionForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);data.unshift({id:crypto.randomUUID(),building:f.get('building'),date:f.get('date'),inspector:f.get('inspector'),area:f.get('area'),content:f.get('content'),status:f.get('status'),memo:f.get('memo'),repairStatus:f.get('status')==='이상 없음'?'완료':'접수',repairMemo:''});save();e.target.reset();document.inspectionForm.date.valueAsDate=new Date();alert('점검 내역이 등록되었습니다.');render();};
-function renderDashboard(){const now=new Date();const ym=now.toISOString().slice(0,7);monthCount.textContent=data.filter(x=>x.date.startsWith(ym)).length;openRepairs.textContent=data.filter(x=>x.status!=='이상 없음'&&x.repairStatus!=='완료').length;urgentCount.textContent=data.filter(x=>x.status==='긴급'&&x.repairStatus!=='완료').length;lastDate.textContent=data[0]?.date?.slice(5).replace('-','/')||'-';buildingCards.innerHTML=buildings.map(b=>{const arr=data.filter(x=>x.building===b);return `<div class="card"><h3>${b}</h3><p>이번 달 점검 <b>${arr.filter(x=>x.date.startsWith(ym)).length}</b>건</p><p>미처리 수리 <b class="need">${arr.filter(x=>x.status!=='이상 없음'&&x.repairStatus!=='완료').length}</b>건</p><p>마지막 점검 <b>${arr[0]?.date?.slice(5).replace('-','/')||'-'}</b></p></div>`}).join('');recentList.innerHTML=data.slice(0,5).map(x=>`<div class="item"><b><span class="badge">${x.building}</span></b><span>${x.area} - ${x.content}</span><em class="${statusClass(x.status)}">${x.status}</em><small>${x.date.slice(5).replace('-','/')}</small></div>`).join('')||'<div class="empty">등록된 점검이 없습니다.</div>'}
-function filtered(){let arr=[...data];const b=filterBuilding.value,s=filterStatus.value,i=filterInspector.value.trim();if(b)arr=arr.filter(x=>x.building===b);if(s)arr=arr.filter(x=>x.status===s);if(i)arr=arr.filter(x=>x.inspector.includes(i));return arr}
-[filterBuilding,filterStatus,filterInspector].forEach(el=>el.oninput=renderHistory);
-function renderHistory(){historyBody.innerHTML=filtered().map(x=>`<tr><td>${x.building}</td><td>${x.date}</td><td>${x.inspector}</td><td>${x.area}</td><td>${x.content}</td><td class="${statusClass(x.status)}">${x.status}</td><td><button class="action" onclick="removeItem('${x.id}')">삭제</button></td></tr>`).join('')||'<tr><td colspan="7">내역이 없습니다.</td></tr>'}
-window.removeItem=id=>{if(confirm('삭제할까요?')){data=data.filter(x=>x.id!==id);save();render()}}
-function renderRepairs(){const arr=data.filter(x=>x.status!=='이상 없음');repairList.innerHTML=arr.map(x=>`<div class="repair-card"><h3>${x.building} · ${x.area}</h3><p>${x.content}</p><p>상태: <b class="${statusClass(x.status)}">${x.status}</b> / 처리: <b>${x.repairStatus}</b></p><div class="row"><select onchange="updateRepair('${x.id}','repairStatus',this.value)"><option ${x.repairStatus==='접수'?'selected':''}>접수</option><option ${x.repairStatus==='진행중'?'selected':''}>진행중</option><option ${x.repairStatus==='완료'?'selected':''}>완료</option></select></div><textarea placeholder="처리내용 입력" onchange="updateRepair('${x.id}','repairMemo',this.value)">${x.repairMemo||''}</textarea></div>`).join('')||'<div class="empty">수리 요청 항목이 없습니다.</div>'}
-window.updateRepair=(id,key,val)=>{const item=data.find(x=>x.id===id);item[key]=val;save();render()}
-exportCsv.onclick=()=>{const rows=[['건물','점검일','점검자','구역','내용','상태','처리상태'],...filtered().map(x=>[x.building,x.date,x.inspector,x.area,x.content,x.status,x.repairStatus])];const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v||'').replaceAll('"','""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='시설점검이력.csv';a.click()}
-render();
+const pages = document.querySelectorAll(".page");
+const navButtons = document.querySelectorAll(".nav");
+
+let inspections = JSON.parse(localStorage.getItem("inspections")) || [];
+
+navButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    navButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    pages.forEach(p => p.classList.remove("active"));
+    document.getElementById(btn.dataset.page).classList.add("active");
+  });
+});
+
+const form = document.getElementById("inspectionForm");
+
+if (form) {
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const data = {
+      id: Date.now(),
+      building: form.building.value,
+      date: form.date.value,
+      inspector: form.inspector.value,
+      area: form.area.value,
+      content: form.content.value,
+      status: form.status.value,
+      memo: form.memo.value,
+      completed: false
+    };
+
+    inspections.push(data);
+
+    localStorage.setItem(
+      "inspections",
+      JSON.stringify(inspections)
+    );
+
+    alert("점검이 등록되었습니다.");
+
+    form.reset();
+
+    renderAll();
+  });
+}
+
+function badge(status) {
+  if (status === "이상 없음") {
+    return `<span class="badge ok">${status}</span>`;
+  }
+
+  if (status === "수리필요") {
+    return `<span class="badge need">${status}</span>`;
+  }
+
+  return `<span class="badge urgent">${status}</span>`;
+}
+
+function renderDashboard() {
+  document.getElementById("monthCount").textContent =
+    inspections.length;
+
+  const repairs = inspections.filter(
+    x =>
+      x.status !== "이상 없음" &&
+      !x.completed
+  );
+
+  document.getElementById("openRepairs").textContent =
+    repairs.length;
+
+  document.getElementById("urgentCount").textContent =
+    inspections.filter(
+      x => x.status === "긴급"
+    ).length;
+
+  document.getElementById("lastDate").textContent =
+    inspections.length
+      ? inspections[inspections.length - 1].date
+      : "-";
+
+  const buildings = [
+    "본사",
+    "물류센터1",
+    "물류센터2",
+    "서교동"
+  ];
+
+  const cards = document.getElementById("buildingCards");
+
+  cards.innerHTML = buildings
+    .map(name => {
+      const count = inspections.filter(
+        x => x.building === name
+      ).length;
+
+      return `
+        <div class="card">
+          <h3>${name}</h3>
+          <p>등록 점검 수 : ${count}</p>
+        </div>
+      `;
+    })
+    .join("");
+
+  const recent = document.getElementById("recentList");
+
+  recent.innerHTML = inspections
+    .slice()
+    .reverse()
+    .slice(0, 5)
+    .map(
+      x => `
+      <div class="list-item">
+        <strong>${x.building}</strong>
+        (${x.date})
+        - ${x.area}
+        - ${x.status}
+      </div>
+    `
+    )
+    .join("");
+}
+
+function renderHistory() {
+  const tbody =
+    document.getElementById("historyBody");
+
+  tbody.innerHTML = inspections
+    .slice()
+    .reverse()
+    .map(
+      x => `
+      <tr>
+        <td>${x.building}</td>
+        <td>${x.date}</td>
+        <td>${x.inspector}</td>
+        <td>${x.area}</td>
+        <td>${x.content}</td>
+        <td>${badge(x.status)}</td>
+        <td>
+          ${
+            x.completed
+              ? "완료"
+              : "진행중"
+          }
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+}
+
+function renderRepairs() {
+  const list =
+    document.getElementById("repairList");
+
+  const repairs = inspections.filter(
+    x => x.status !== "이상 없음"
+  );
+
+  list.innerHTML = repairs
+    .map(
+      x => `
+      <div class="repair-card">
+        <h3>${x.building}</h3>
+        <p>${x.area}</p>
+        <p>${x.content}</p>
+        <p>${badge(x.status)}</p>
+
+        ${
+          x.completed
+            ? "<strong>처리완료</strong>"
+            : `<button onclick="completeRepair(${x.id})">
+                완료처리
+               </button>`
+        }
+      </div>
+    `
+    )
+    .join("");
+}
+
+function completeRepair(id) {
+  inspections = inspections.map(x => {
+    if (x.id === id) {
+      x.completed = true;
+    }
+    return x;
+  });
+
+  localStorage.setItem(
+    "inspections",
+    JSON.stringify(inspections)
+  );
+
+  renderAll();
+}
+
+window.completeRepair =
+  completeRepair;
+
+function renderAll() {
+  renderDashboard();
+  renderHistory();
+  renderRepairs();
+}
+
+renderAll();
