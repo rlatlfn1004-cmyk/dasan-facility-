@@ -157,7 +157,7 @@ function renderHistory() {
   const list = getFilteredList().slice().reverse();
 
   tbody.innerHTML = list.length === 0
-    ? `<tr><td colspan="7">등록된 점검 이력이 없습니다.</td></tr>`
+    ? `<tr><td colspan="8">등록된 점검 이력이 없습니다.</td></tr>`
     : list.map(x => `
       <tr>
         <td>${x.building}</td>
