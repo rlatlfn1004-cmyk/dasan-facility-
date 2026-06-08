@@ -2,74 +2,116 @@
   box-sizing: border-box;
 }
 
+:root {
+  --red: #d71920;
+  --dark-red: #b91c1c;
+  --soft-red: #fff1f1;
+  --text: #111827;
+  --muted: #6b7280;
+  --line: #eeeeee;
+  --bg: #ffffff;
+  --card: #ffffff;
+}
+
 body {
   margin: 0;
   font-family: Pretendard, Arial, sans-serif;
-  background: #f4f6f8;
-  color: #222;
+  background: #fff;
+  color: var(--text);
 }
 
 .app {
   display: flex;
   min-height: 100vh;
+  padding-top: 86px;
+}
+
+.app::before {
+  content: "🏢 Dasan Books";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 86px;
+  background: white;
+  border-bottom: 4px solid var(--red);
+  display: flex;
+  align-items: center;
+  padding-left: 32px;
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--red);
+  z-index: 10;
+  letter-spacing: -1px;
 }
 
 .sidebar {
-  width: 240px;
-  background: #1f2937;
-  color: white;
-  padding: 24px 16px;
+  width: 280px;
+  background: #fff;
+  border-right: 1px solid #eee;
+  padding: 32px 22px;
+  min-height: calc(100vh - 86px);
 }
 
-.brand strong {
-  display: block;
-  font-size: 24px;
-}
-
-.brand span,
-.brand small {
-  display: block;
-  margin-top: 6px;
-  color: #cbd5e1;
+.brand {
+  display: none;
 }
 
 nav {
-  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .nav {
   width: 100%;
-  padding: 14px;
-  margin-bottom: 8px;
+  padding: 18px 20px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
-  color: white;
+  color: #222;
   text-align: left;
-  font-size: 15px;
+  font-size: 17px;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .nav.active,
 .nav:hover {
-  background: #374151;
+  background: linear-gradient(135deg, #ef121c, #c9000b);
+  color: white;
+  box-shadow: 0 8px 18px rgba(215, 25, 32, 0.25);
 }
 
 .user {
-  margin-top: 40px;
-  padding: 14px;
-  background: #111827;
-  border-radius: 12px;
+  margin-top: 300px;
+  padding: 20px;
+  border: 1px solid #ffd6d6;
+  background: linear-gradient(180deg, #fff, #fff5f5);
+  border-radius: 16px;
+  color: #222;
   font-size: 14px;
 }
 
 .user span {
-  color: #93c5fd;
+  color: var(--red);
+  font-weight: 800;
+}
+
+.user button {
+  border: 1px solid var(--red);
+  background: white;
+  color: var(--red);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .main {
   flex: 1;
-  padding: 32px;
+  padding: 42px 46px;
+  background: #fff;
 }
 
 .page {
@@ -81,83 +123,194 @@ nav {
 }
 
 header h1 {
-  margin-bottom: 4px;
+  margin: 0 0 10px;
+  font-size: 38px;
+  font-weight: 900;
 }
 
 header p {
   margin-top: 0;
-  color: #666;
+  color: var(--muted);
+  font-size: 17px;
 }
 
-.stats,
-.cards,
-.repair-grid {
+h2 {
+  margin: 40px 0 20px;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.stats {
+  display: none;
+}
+
+.cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin: 20px 0 32px;
+  gap: 26px;
+  margin: 20px 0 46px;
 }
 
-.stat,
-.card,
-.repair-card,
-.form,
-.list,
-table {
+.card {
   background: white;
+  border: 1px solid #eee;
   border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-}
-
-.stat span {
-  display: block;
-  color: #777;
-  font-size: 14px;
-}
-
-.stat strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 28px;
-}
-
-.stat.danger strong {
-  color: #dc2626;
-}
-
-.stat.warn strong {
-  color: #f59e0b;
+  padding: 28px;
+  min-height: 230px;
+  text-align: center;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.07);
 }
 
 .card h3 {
-  margin-top: 0;
+  margin: 0 0 24px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.card::before {
+  content: "▥";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: #ffe4e6;
+  color: var(--red);
+  font-size: 42px;
+  font-weight: 900;
+}
+
+.card p {
+  margin: 14px 0;
+  font-size: 16px;
+}
+
+.card p:first-of-type {
+  color: #333;
+}
+
+.card p:first-of-type::after {
+  content: "";
+  display: block;
+  width: 80%;
+  height: 1px;
+  background: #eee;
+  margin: 16px auto 0;
+}
+
+.card p {
+  font-weight: 700;
+}
+
+.card p:nth-of-type(1),
+.card p:nth-of-type(2) {
+  color: #222;
+}
+
+.card p:nth-of-type(1) {
+  font-size: 16px;
+}
+
+.card p:nth-of-type(1) {
+  white-space: pre-line;
+}
+
+.list {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
+}
+
+.list-item {
+  padding: 18px 0;
+  border-bottom: 1px solid #eee;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
+}
+
+th,
+td {
+  padding: 18px 20px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-size: 15px;
+}
+
+th {
+  background: #fff4f4;
+  color: var(--dark-red);
+  font-weight: 900;
+}
+
+.badge {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.badge.ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge.need {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.badge.urgent {
+  background: #fee2e2;
+  color: var(--dark-red);
 }
 
 .form {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
 
 label {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 input,
 select,
 textarea {
-  padding: 12px;
-  border: 1px solid #d1d5db;
+  padding: 14px;
+  border: 1px solid #ddd;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 15px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #fecaca;
+  border-color: var(--red);
 }
 
 textarea {
-  min-height: 100px;
+  min-height: 110px;
   resize: vertical;
 }
 
@@ -166,14 +319,24 @@ textarea {
 }
 
 .primary,
-.filters button {
-  padding: 13px 18px;
-  border: 0;
+.filters button,
+button {
   border-radius: 10px;
-  background: #2563eb;
+}
+
+.primary,
+.filters button {
+  padding: 15px 20px;
+  border: 0;
+  background: var(--red);
   color: white;
-  font-weight: 700;
+  font-weight: 900;
   cursor: pointer;
+}
+
+.primary:hover,
+.filters button:hover {
+  background: var(--dark-red);
 }
 
 .primary {
@@ -182,81 +345,69 @@ textarea {
 
 .filters {
   display: flex;
-  gap: 10px;
-  margin: 20px 0;
+  gap: 12px;
+  margin: 22px 0;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  overflow: hidden;
+#exportCsv {
+  background: var(--red);
 }
 
-th,
-td {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-  font-size: 14px;
-}
-
-th {
-  background: #f9fafb;
-}
-
-.badge {
-  padding: 5px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.badge.ok {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.badge.need {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.badge.urgent {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.list-item {
-  padding: 12px 0;
-  border-bottom: 1px solid #eee;
-}
-
-.repair-card h3 {
-  margin-top: 0;
-}
-
-.repair-card button {
-  margin-top: 10px;
-  padding: 10px;
-  border: 0;
-  border-radius: 8px;
-  background: #16a34a;
-  color: white;
+button.editBtn,
+button.deleteBtn,
+button.completeBtn,
+button.cancelBtn,
+button.processBtn {
+  margin: 4px 3px;
+  padding: 7px 10px;
+  border: 1px solid #ddd;
+  background: white;
   cursor: pointer;
+  font-size: 12px;
 }
 
-@media (max-width: 900px) {
+button.deleteBtn {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+button.completeBtn,
+button.processBtn {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.repair-grid {
+  display: none;
+}
+
+footer {
+  text-align: center;
+  color: #777;
+  margin-top: 60px;
+}
+
+@media (max-width: 1100px) {
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
   .app {
     flex-direction: column;
   }
 
   .sidebar {
     width: 100%;
+    min-height: auto;
   }
 
-  .stats,
+  .main {
+    padding: 28px 20px;
+  }
+
   .cards,
-  .repair-grid,
   .form {
     grid-template-columns: 1fr;
   }
