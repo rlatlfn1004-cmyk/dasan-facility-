@@ -1,10 +1,38 @@
-let inspections = JSON.parse(localStorage.getItem("inspections")) || [];
+let inspections = JSON.parse(localStorage.getItem("inspections") || "[]");
 let isAdmin = localStorage.getItem("isAdmin") === "true";
 const ADMIN_PASSWORD = "1234";
 
 const pages = document.querySelectorAll(".page");
 const navButtons = document.querySelectorAll(".nav");
 const form = document.getElementById("inspectionForm");
+
+const userBox = document.querySelector(".user");
+userBox.innerHTML = `
+  김주림 <span>관리자</span><br>
+  <small>본사</small><br>
+  <button id="adminLoginBtn" style="margin-top:10px;">관리자 로그인</button>
+  <button id="adminLogoutBtn" style="margin-top:6px;">로그아웃</button>
+  <div id="adminStatus" style="margin-top:8px;font-size:12px;"></div>
+`;
+
+document.getElementById("adminLoginBtn").addEventListener("click", () => {
+  const pw = prompt("관리자 비밀번호를 입력하세요.");
+  if (pw === ADMIN_PASSWORD) {
+    isAdmin = true;
+    localStorage.setItem("isAdmin", "true");
+    alert("관리자 모드 ON");
+    renderAll();
+  } else {
+    alert("비밀번호가 틀렸습니다.");
+  }
+});
+
+document.getElementById("adminLogoutBtn").addEventListener("click", () => {
+  isAdmin = false;
+  localStorage.removeItem("isAdmin");
+  alert("관리자 모드 OFF");
+  renderAll();
+});
 
 navButtons.forEach(btn => {
   btn.addEventListener("click", () => {
@@ -18,78 +46,63 @@ navButtons.forEach(btn => {
   });
 });
 
-const userBox = document.querySelector(".user");
-userBox.innerHTML = `
-  김주림 <span>관리자</span><br>
-  <small>본사</small><br>
-  <button onclick="adminLogin()" style="margin-top:10px;">관리자 로그인</button>
-  <button onclick="adminLogout()" style="margin-top:6px;">로그아웃</button>
-  <div id="adminStatus" style="margin-top:8px;font-size:12px;"></div>
-`;
-
-function adminLogin() {
-  const pw = prompt("관리자 비밀번호를 입력하세요.");
-
-  if (pw === ADMIN_PASSWORD) {
-    isAdmin = true;
-    localStorage.setItem("isAdmin", "true");
-    alert("관리자 모드가 켜졌습니다.");
-    renderAll();
-  } else {
-    alert("비밀번호가 틀렸습니다.");
-  }
-}
-
-function adminLogout() {
-  isAdmin = false;
-  localStorage.removeItem("isAdmin");
-  alert("관리자 모드가 꺼졌습니다.");
-  renderAll();
-}
-
-window.adminLogin = adminLogin;
-window.adminLogout = adminLogout;
-
 form.addEventListener("submit", e => {
   e.preventDefault();
 
+  const formData = new FormData(form);
   const editId = form.dataset.editId;
 
-  const data = {
+  const oldItem = editId
+    ? inspections.find(item => item.id === Number(editId))
+    : null;
+
+  const item = {
     id: editId ? Number(editId) : Date.now(),
-    building: form.building.value,
-    date: form.date.value,
-    inspector: form.inspector.value,
-    area: form.area.value,
-    content: form.content.value,
-    status: form.status.value,
-    memo: form.memo.value,
-    completed: editId
-      ? inspections.find(x => x.id === Number(editId))?.completed || false
-      : false
+    building: formData.get("building"),
+    date: formData.get("date"),
+    inspector: formData.get("inspector"),
+    area: formData.get("area"),
+    content: formData.get("content"),
+    status: formData.get("status"),
+    memo: formData.get("memo") || "",
+    completed: oldItem ? oldItem.completed : false
   };
 
   if (editId) {
     inspections = inspections.map(x =>
-      x.id === Number(editId) ? data : x
+      x.id === Number(editId) ? item : x
     );
     delete form.dataset.editId;
     alert("수정되었습니다.");
   } else {
-    inspections.push(data);
+    inspections.push(item);
     alert("등록되었습니다.");
   }
 
-  localStorage.setItem("inspections", JSON.stringify(inspections));
+  saveData();
   form.reset();
   renderAll();
-  document.querySelector('[data-page="history"]').click();
+  goPage("history");
 });
 
+function saveData() {
+  localStorage.setItem("inspections", JSON.stringify(inspections));
+}
+
+function goPage(pageName) {
+  navButtons.forEach(b => b.classList.remove("active"));
+  pages.forEach(p => p.classList.remove("active"));
+
+  document.querySelector(`[data-page="${pageName}"]`).classList.add("active");
+  document.getElementById(pageName).classList.add("active");
+
+  renderAll();
+}
+
 function badge(status) {
-  if (status === "이상 없음") return `<span class="badge ok">${status}</span>`;
-  if (status === "수리필요") return `<span class="badge need">${status}</span>`;
-  return `<span class="badge urgent">${status}</span>`;
+  if (status === "이상 없음") return `<span class="badge ok">이상 없음</span>`;
+  if (status === "수리필요") return `<span class="badge need">수리필요</span>`;
+  return `<span class="badge urgent">긴급</span>`;
 }
 
 function renderDashboard() {
@@ -117,25 +130,35 @@ function renderDashboard() {
     `;
   }).join("");
 
-  document.getElementById("recentList").innerHTML = inspections
-    .slice()
-    .reverse()
-    .slice(0, 5)
-    .map(x => `
-      <div class="list-item">
-        <strong>${x.building}</strong> (${x.date}) - ${x.area} - ${x.status}
-      </div>
-    `)
-    .join("");
+  document.getElementById("recentList").innerHTML =
+    inspections.length === 0
+      ? `<p>등록된 점검이 없습니다.</p>`
+      : inspections.slice().reverse().slice(0, 5).map(x => `
+          <div class="list-item">
+            <strong>${x.building}</strong> ${x.date} / ${x.area} / ${x.status}
+          </div>
+        `).join("");
+}
+
+function getFilteredList() {
+  const building = document.getElementById("filterBuilding")?.value || "";
+  const status = document.getElementById("filterStatus")?.value || "";
+  const inspector = document.getElementById("filterInspector")?.value || "";
+
+  return inspections.filter(x =>
+    (!building || x.building === building) &&
+    (!status || x.status === status) &&
+    (!inspector || x.inspector.includes(inspector))
+  );
 }
 
 function renderHistory() {
   const tbody = document.getElementById("historyBody");
+  const list = getFilteredList().slice().reverse();
 
-  tbody.innerHTML = inspections
-    .slice()
-    .reverse()
-    .map(x => `
+  tbody.innerHTML = list.length === 0
+    ? `<tr><td colspan="7">등록된 점검 이력이 없습니다.</td></tr>`
+    : list.map(x => `
       <tr>
         <td>${x.building}</td>
         <td>${x.date}</td>
@@ -145,104 +168,99 @@ function renderHistory() {
         <td>${badge(x.status)}</td>
         <td>
           ${x.completed ? "완료" : "진행중"}
-          ${
-            isAdmin
-              ? `<br>
-                 <button onclick="editInspection(${x.id})">수정</button>
-                 <button onclick="deleteInspection(${x.id})">삭제</button>
-                 ${
-                   x.completed
-                     ? `<button onclick="cancelComplete(${x.id})">완료취소</button>`
-                     : `<button onclick="completeRepair(${x.id})">완료처리</button>`
-                 }`
-              : ""
-          }
+          ${isAdmin ? `
+            <br>
+            <button class="editBtn" data-id="${x.id}">수정</button>
+            <button class="deleteBtn" data-id="${x.id}">삭제</button>
+            ${x.completed
+              ? `<button class="cancelBtn" data-id="${x.id}">완료취소</button>`
+              : `<button class="completeBtn" data-id="${x.id}">완료처리</button>`
+            }
+          ` : ""}
         </td>
       </tr>
-    `)
-    .join("");
+    `).join("");
 }
 
 function renderRepairs() {
   const list = document.getElementById("repairList");
   const repairs = inspections.filter(x => x.status !== "이상 없음");
 
-  if (repairs.length === 0) {
-    list.innerHTML = `<p>수리필요 또는 긴급 항목이 없습니다.</p>`;
-    return;
+  list.innerHTML = repairs.length === 0
+    ? `<p>수리필요 또는 긴급 항목이 없습니다.</p>`
+    : repairs.map(x => `
+      <div class="repair-card">
+        <h3>${x.building}</h3>
+        <p><strong>점검일:</strong> ${x.date}</p>
+        <p><strong>구역:</strong> ${x.area}</p>
+        <p><strong>내용:</strong> ${x.content}</p>
+        <p>${badge(x.status)}</p>
+        <p><strong>처리:</strong> ${x.completed ? "완료" : "진행중"}</p>
+        ${isAdmin ? `
+          ${x.completed
+            ? `<button class="cancelBtn" data-id="${x.id}">완료취소</button>`
+            : `<button class="completeBtn" data-id="${x.id}">완료처리</button>`
+          }
+        ` : ""}
+      </div>
+    `).join("");
+}
+
+document.addEventListener("click", e => {
+  const id = Number(e.target.dataset.id);
+
+  if (e.target.classList.contains("deleteBtn")) {
+    if (!isAdmin) return alert("관리자만 삭제할 수 있습니다.");
+    if (!confirm("정말 삭제하시겠습니까?")) return;
+
+    inspections = inspections.filter(x => x.id !== id);
+    saveData();
+    renderAll();
   }
 
-  list.innerHTML = repairs.map(x => `
-    <div class="repair-card">
-      <h3>${x.building}</h3>
-      <p><strong>구역:</strong> ${x.area}</p>
-      <p><strong>내용:</strong> ${x.content}</p>
-      <p>${badge(x.status)}</p>
-      <p><strong>처리상태:</strong> ${x.completed ? "완료" : "진행중"}</p>
-      ${
-        isAdmin
-          ? x.completed
-            ? `<button onclick="cancelComplete(${x.id})">완료취소</button>`
-            : `<button onclick="completeRepair(${x.id})">완료처리</button>`
-          : ""
-      }
-    </div>
-  `).join("");
-}
+  if (e.target.classList.contains("editBtn")) {
+    if (!isAdmin) return alert("관리자만 수정할 수 있습니다.");
 
-function editInspection(id) {
-  if (!isAdmin) return alert("관리자만 수정할 수 있습니다.");
+    const item = inspections.find(x => x.id === id);
+    if (!item) return;
 
-  const item = inspections.find(x => x.id === id);
-  if (!item) return;
+    form.elements["building"].value = item.building;
+    form.elements["date"].value = item.date;
+    form.elements["inspector"].value = item.inspector;
+    form.elements["area"].value = item.area;
+    form.elements["content"].value = item.content;
+    form.elements["status"].value = item.status;
+    form.elements["memo"].value = item.memo || "";
+    form.dataset.editId = id;
 
-  form.building.value = item.building;
-  form.date.value = item.date;
-  form.inspector.value = item.inspector;
-  form.area.value = item.area;
-  form.content.value = item.content;
-  form.status.value = item.status;
-  form.memo.value = item.memo || "";
-  form.dataset.editId = id;
+    goPage("register");
+    alert("내용 수정 후 등록하기 버튼을 누르면 저장됩니다.");
+  }
 
-  document.querySelector('[data-page="register"]').click();
-}
+  if (e.target.classList.contains("completeBtn")) {
+    if (!isAdmin) return alert("관리자만 완료처리할 수 있습니다.");
 
-function deleteInspection(id) {
-  if (!isAdmin) return alert("관리자만 삭제할 수 있습니다.");
-  if (!confirm("정말 삭제하시겠습니까?")) return;
+    inspections = inspections.map(x =>
+      x.id === id ? { ...x, completed: true } : x
+    );
+    saveData();
+    renderAll();
+  }
 
-  inspections = inspections.filter(x => x.id !== id);
-  localStorage.setItem("inspections", JSON.stringify(inspections));
-  renderAll();
-}
+  if (e.target.classList.contains("cancelBtn")) {
+    if (!isAdmin) return alert("관리자만 완료취소할 수 있습니다.");
 
-function completeRepair(id) {
-  if (!isAdmin) return alert("관리자만 완료처리할 수 있습니다.");
+    inspections = inspections.map(x =>
+      x.id === id ? { ...x, completed: false } : x
+    );
+    saveData();
+    renderAll();
+  }
+});
 
-  inspections = inspections.map(x =>
-    x.id === id ? { ...x, completed: true } : x
-  );
-
-  localStorage.setItem("inspections", JSON.stringify(inspections));
-  renderAll();
-}
-
-function cancelComplete(id) {
-  if (!isAdmin) return alert("관리자만 완료취소할 수 있습니다.");
-
-  inspections = inspections.map(x =>
-    x.id === id ? { ...x, completed: false } : x
-  );
-
-  localStorage.setItem("inspections", JSON.stringify(inspections));
-  renderAll();
-}
-
-window.editInspection = editInspection;
-window.deleteInspection = deleteInspection;
-window.completeRepair = completeRepair;
-window.cancelComplete = cancelComplete;
+document.getElementById("filterBuilding")?.addEventListener("change", renderHistory);
+document.getElementById("filterStatus")?.addEventListener("change", renderHistory);
+document.getElementById("filterInspector")?.addEventListener("input", renderHistory);
 
 function renderAll() {
   const adminStatus = document.getElementById("adminStatus");
