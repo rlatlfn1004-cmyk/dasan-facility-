@@ -36,13 +36,7 @@ document.getElementById("adminLogoutBtn").addEventListener("click", () => {
 
 navButtons.forEach(btn => {
   btn.addEventListener("click", () => {
-    navButtons.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-
-    pages.forEach(p => p.classList.remove("active"));
-    document.getElementById(btn.dataset.page).classList.add("active");
-
-    renderAll();
+    goPage(btn.dataset.page);
   });
 });
 
@@ -65,7 +59,8 @@ form.addEventListener("submit", e => {
     content: formData.get("content"),
     status: formData.get("status"),
     memo: formData.get("memo") || "",
-    completed: oldItem ? oldItem.completed : false
+    completed: oldItem ? oldItem.completed : false,
+    processMemo: oldItem ? oldItem.processMemo || "" : ""
   };
 
   if (editId) {
@@ -81,7 +76,6 @@ form.addEventListener("submit", e => {
 
   saveData();
   form.reset();
-  renderAll();
   goPage("history");
 });
 
@@ -93,8 +87,8 @@ function goPage(pageName) {
   navButtons.forEach(b => b.classList.remove("active"));
   pages.forEach(p => p.classList.remove("active"));
 
-  document.querySelector(`[data-page="${pageName}"]`).classList.add("active");
-  document.getElementById(pageName).classList.add("active");
+  document.querySelector(`[data-page="${pageName}"]`)?.classList.add("active");
+  document.getElementById(pageName)?.classList.add("active");
 
   renderAll();
 }
@@ -122,10 +116,15 @@ function renderDashboard() {
 
   cards.innerHTML = buildings.map(name => {
     const count = inspections.filter(x => x.building === name).length;
+    const needCount = inspections.filter(
+      x => x.building === name && x.status !== "이상 없음" && !x.completed
+    ).length;
+
     return `
       <div class="card">
         <h3>${name}</h3>
         <p>등록 점검 수 : ${count}</p>
+        <p>미처리 수리 : ${needCount}</p>
       </div>
     `;
   }).join("");
@@ -160,16 +159,22 @@ function renderHistory() {
     ? `<tr><td colspan="8">등록된 점검 이력이 없습니다.</td></tr>`
     : list.map(x => `
       <tr>
-        <td>${x.building}</td>
-        <td>${x.date}</td>
-        <td>${x.inspector}</td>
-        <td>${x.area}</td>
-        <td>${x.content}</td>
+        <td>${x.building || "-"}</td>
+        <td>${x.date || "-"}</td>
+        <td>${x.inspector || "-"}</td>
+        <td>${x.area || "-"}</td>
+        <td>${x.content || "-"}</td>
+        <td>${x.memo || "-"}</td>
         <td>${badge(x.status)}</td>
         <td>
-          ${x.completed ? "완료" : "진행중"}
+          <div><strong>${x.completed ? "완료" : "진행중"}</strong></div>
+          <div style="font-size:12px; margin-top:4px; color:#555;">
+            ${x.processMemo || "-"}
+          </div>
+
           ${isAdmin ? `
             <br>
+            <button class="processBtn" data-id="${x.id}">처리내용 작성</button>
             <button class="editBtn" data-id="${x.id}">수정</button>
             <button class="deleteBtn" data-id="${x.id}">삭제</button>
             ${x.completed
@@ -194,9 +199,13 @@ function renderRepairs() {
         <p><strong>점검일:</strong> ${x.date}</p>
         <p><strong>구역:</strong> ${x.area}</p>
         <p><strong>내용:</strong> ${x.content}</p>
+        <p><strong>비고:</strong> ${x.memo || "-"}</p>
         <p>${badge(x.status)}</p>
-        <p><strong>처리:</strong> ${x.completed ? "완료" : "진행중"}</p>
+        <p><strong>처리상태:</strong> ${x.completed ? "완료" : "진행중"}</p>
+        <p><strong>처리내용:</strong> ${x.processMemo || "-"}</p>
+
         ${isAdmin ? `
+          <button class="processBtn" data-id="${x.id}">처리내용 작성</button>
           ${x.completed
             ? `<button class="cancelBtn" data-id="${x.id}">완료취소</button>`
             : `<button class="completeBtn" data-id="${x.id}">완료처리</button>`
@@ -237,12 +246,34 @@ document.addEventListener("click", e => {
     alert("내용 수정 후 등록하기 버튼을 누르면 저장됩니다.");
   }
 
+  if (e.target.classList.contains("processBtn")) {
+    if (!isAdmin) return alert("관리자만 처리내용을 작성할 수 있습니다.");
+
+    const item = inspections.find(x => x.id === id);
+    if (!item) return;
+
+    const memo = prompt("처리내용을 입력하세요.", item.processMemo || "");
+    if (memo === null) return;
+
+    inspections = inspections.map(x =>
+      x.id === id ? { ...x, processMemo: memo } : x
+    );
+
+    saveData();
+    renderAll();
+  }
+
   if (e.target.classList.contains("completeBtn")) {
     if (!isAdmin) return alert("관리자만 완료처리할 수 있습니다.");
 
+    const item = inspections.find(x => x.id === id);
+    const memo = prompt("처리내용을 입력하세요.", item?.processMemo || "");
+    if (memo === null) return;
+
     inspections = inspections.map(x =>
-      x.id === id ? { ...x, completed: true } : x
+      x.id === id ? { ...x, completed: true, processMemo: memo } : x
     );
+
     saveData();
     renderAll();
   }
@@ -253,6 +284,7 @@ document.addEventListener("click", e => {
     inspections = inspections.map(x =>
       x.id === id ? { ...x, completed: false } : x
     );
+
     saveData();
     renderAll();
   }
