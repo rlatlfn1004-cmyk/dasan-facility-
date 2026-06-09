@@ -19,7 +19,9 @@ const inspectionsRef = collection(db, "inspections");
 
 let allData = [];
 let repFilter = 'all';
+let isAdmin = false; // 기본은 일반 팀원
 
+const ADMIN_PASSWORD = "dasan1234"; // ← 비밀번호 여기서 바꾸세요
 const BLDGS = ['본사', '물류센터1', '물류센터2', '서교동'];
 const PAGE_INFO = {
   dashboard: ['대시보드', '시설 점검 현황을 한눈에 확인하세요.'],
@@ -28,15 +30,61 @@ const PAGE_INFO = {
   repairs:   ['처리 및 수정', '수리 요청 및 처리 현황을 관리합니다.'],
 };
 
+// ── 관리자 로그인/로그아웃 ─────────────────────────────────
+window.openAdminLogin = function() {
+  document.getElementById('admin-modal').classList.add('on');
+  document.getElementById('admin-pw').value = '';
+  setTimeout(() => document.getElementById('admin-pw').focus(), 100);
+}
+
+window.closeAdminLogin = function() {
+  document.getElementById('admin-modal').classList.remove('on');
+}
+
+window.submitAdminLogin = function() {
+  const pw = document.getElementById('admin-pw').value;
+  if (pw === ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.getElementById('admin-modal').classList.remove('on');
+    document.getElementById('admin-btn').style.display = 'none';
+    document.getElementById('logout-btn').style.display = 'inline-flex';
+    document.getElementById('user-label').textContent = '김주림 (관리자)';
+    renderAll();
+  } else {
+    document.getElementById('admin-pw-err').style.display = 'block';
+  }
+}
+
+window.adminLogout = function() {
+  isAdmin = false;
+  document.getElementById('admin-btn').style.display = 'inline-flex';
+  document.getElementById('logout-btn').style.display = 'none';
+  document.getElementById('user-label').textContent = '팀원';
+  renderAll();
+}
+
+// 엔터키로 로그인
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('admin-pw').addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.submitAdminLogin();
+  });
+});
+
+// ── 실시간 데이터 구독 ─────────────────────────────────────
 onSnapshot(query(inspectionsRef, orderBy("createdAt", "desc")), (snap) => {
   allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  renderDashboard();
+  renderAll();
   updateNoti();
+});
+
+function renderAll() {
+  renderDashboard();
   const page = document.querySelector('.page.on')?.id?.replace('p-', '');
   if (page === 'history') renderHistory();
   if (page === 'repairs') renderRepairs();
-});
+}
 
+// ── 페이지 이동 ────────────────────────────────────────────
 window.go = function(page, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('on'));
   if (el) el.classList.add('on');
@@ -49,6 +97,7 @@ window.go = function(page, el) {
   if (page === 'dashboard') renderDashboard();
 }
 
+// ── 대시보드 ───────────────────────────────────────────────
 function renderDashboard() {
   document.getElementById('bldg-grid').innerHTML = BLDGS.map(b => {
     const bi   = allData.filter(i => i.building === b);
@@ -79,6 +128,7 @@ function renderDashboard() {
     : `<tr class="empty-row"><td colspan="7">등록된 점검 내역이 없습니다</td></tr>`;
 }
 
+// ── 점검 이력 ──────────────────────────────────────────────
 window.renderHistory = function() {
   const fb = document.getElementById('f-building').value;
   const fs = document.getElementById('f-status').value;
@@ -101,6 +151,7 @@ window.renderHistory = function() {
     : `<tr class="empty-row"><td colspan="8">내역이 없습니다</td></tr>`;
 }
 
+// ── 수리 처리 ──────────────────────────────────────────────
 function renderRepairs() {
   let d = allData.filter(i => i.status === '수리필요' || i.status === '긴급' || i.status === '완료');
   if (repFilter !== 'all') d = d.filter(i => i.status === repFilter);
@@ -115,9 +166,10 @@ function renderRepairs() {
         <div class="rep-foot">
           <span class="rep-meta">${i.date} · ${i.author||'-'}</span>
           <div style="display:flex;gap:6px">
-            ${i.status !== '완료' ? `<button class="btn-sm red" onclick="markDone('${i.id}')">완료 처리</button>` : `<span class="btn-sm done">✓ 처리 완료</span>`}
+            ${isAdmin && i.status !== '완료' ? `<button class="btn-sm red" onclick="markDone('${i.id}')">완료 처리</button>` : ''}
+            ${isAdmin && i.status === '완료' ? `<span class="btn-sm done">✓ 처리 완료</span>` : ''}
             <button class="btn-sm" onclick="showDetail('${i.id}')">상세</button>
-            <button class="btn-sm" style="color:#C8001E;border-color:#fcc" onclick="deleteItem('${i.id}')">삭제</button>
+            ${isAdmin ? `<button class="btn-sm" style="color:#C8001E;border-color:#fcc" onclick="deleteItem('${i.id}')">삭제</button>` : ''}
           </div>
         </div>
       </div>`).join('')
@@ -131,6 +183,7 @@ window.filterRep = function(f, el) {
   renderRepairs();
 }
 
+// ── 점검 등록 ──────────────────────────────────────────────
 window.submitReg = async function() {
   const building = document.getElementById('r-building').value;
   const date     = document.getElementById('r-date').value;
@@ -163,6 +216,7 @@ window.resetReg = function() {
   document.getElementById('r-status').value = '이상없음';
 }
 
+// ── 상세 모달 ──────────────────────────────────────────────
 window.showDetail = function(id) {
   const i = allData.find(x => x.id === id);
   if (!i) return;
@@ -177,24 +231,28 @@ window.showDetail = function(id) {
       <tr><td>상태</td><td>${badgeHtml(i.status)}</td></tr>
     </table>`;
   document.getElementById('mo-btns').innerHTML = `
-    ${i.status !== '완료' ? `<button class="btn-red" onclick="markDone('${id}');closeMo()">완료 처리</button>` : ''}
-    <button class="btn-outline" style="color:#C8001E;border-color:#fcc" onclick="deleteItem('${id}');closeMo()">삭제</button>
+    ${isAdmin && i.status !== '완료' ? `<button class="btn-red" onclick="markDone('${id}');closeMo()">완료 처리</button>` : ''}
+    ${isAdmin ? `<button class="btn-outline" style="color:#C8001E;border-color:#fcc" onclick="deleteItem('${id}');closeMo()">삭제</button>` : ''}
     <button class="btn-outline" onclick="closeMo()" style="margin-left:auto">닫기</button>`;
   document.getElementById('modal').classList.add('on');
 }
 
 window.closeMo = function() { document.getElementById('modal').classList.remove('on'); }
 
+// ── 완료 처리 / 삭제 ──────────────────────────────────────
 window.markDone = async function(id) {
+  if (!isAdmin) return;
   if (!confirm('완료 처리 하시겠습니까?')) return;
   await updateDoc(doc(db, 'inspections', id), { status: '완료' });
 }
 
 window.deleteItem = async function(id) {
+  if (!isAdmin) return;
   if (!confirm('정말 삭제하시겠습니까?')) return;
   await deleteDoc(doc(db, 'inspections', id));
 }
 
+// ── CSV 다운로드 ────────────────────────────────────────────
 window.downloadCSV = function() {
   const fb = document.getElementById('f-building').value;
   const fs = document.getElementById('f-status').value;
