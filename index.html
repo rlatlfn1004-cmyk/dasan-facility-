@@ -2,26 +2,30 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>다산북스 시설관리 시스템</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="app">
+  <!-- 모바일 상단바 -->
+  <div id="mobile-header">
+    <div class="mob-logo"><span class="logo-dasan">Dasan</span><span class="logo-books"> Books</span></div>
+    <button class="mob-menu-btn" onclick="toggleMobileMenu()">☰</button>
+  </div>
+
   <aside id="sidebar">
-    <div class="sb-logo">
-      <span class="logo-dasan">Dasan</span><span class="logo-books"> Books</span>
-    </div>
+    <div class="sb-logo"><span class="logo-dasan">Dasan</span><span class="logo-books"> Books</span></div>
     <nav>
-      <div class="nav-item on" data-page="dashboard" onclick="go('dashboard',this)"><span class="nav-icon">📌</span> 대시보드</div>
+      <div class="nav-item on" data-page="dashboard" onclick="go('dashboard',this)"><span class="nav-icon">🏠</span> 대시보드</div>
       <div class="nav-item" data-page="register" onclick="go('register',this)"><span class="nav-icon">📝</span> 점검 등록</div>
       <div class="nav-item" data-page="history" onclick="go('history',this)"><span class="nav-icon">📋</span> 점검 이력</div>
       <div class="nav-item" data-page="repairs" onclick="go('repairs',this)"><span class="nav-icon">🔧</span> 처리 및 수정</div>
     </nav>
     <div class="sb-notice">
       <div class="sb-notice-title">사용 안내</div>
-      <div class="sb-notice-text">시설 점검 및 관리 시스템입니다.<br>문의사항은 관리자에게 연락해주세요(내선0924).</div>
+      <div class="sb-notice-text">시설 점검 및 관리 시스템입니다.<br>문의사항은 관리자에게 연락해주세요.</div>
     </div>
   </aside>
 
@@ -32,11 +36,9 @@
         <p id="page-sub">시설 점검 현황을 한눈에 확인하세요.</p>
       </div>
       <div class="topbar-right">
-        <div class="noti-btn">🔔 <span class="noti-badge" id="noti-count">0</span></div>
-        <!-- 관리자 로그인 버튼 -->
-        <button id="admin-btn" class="btn-outline" onclick="openAdminLogin()">🔐 관리자 로그인</button>
-        <!-- 로그아웃 버튼 (관리자일 때만 보임) -->
-        <button id="logout-btn" class="btn-outline" onclick="adminLogout()" style="display:none;color:#C8001E;border-color:#fcc">🔓 관리자 로그아웃</button>
+        <div class="noti-btn">🔔<span class="noti-badge" id="noti-count">0</span></div>
+        <button id="admin-btn" class="btn-outline" onclick="openAdminLogin()">🔐 관리자</button>
+        <button id="logout-btn" class="btn-outline" onclick="adminLogout()" style="display:none;color:#C8001E;border-color:#fcc">🔓 로그아웃</button>
         <div class="user-btn">👤 <span id="user-label">팀원</span></div>
       </div>
     </header>
@@ -49,7 +51,7 @@
         <div class="bldg-grid" id="bldg-grid"></div>
         <div class="sec-row">
           <h2 class="sec-title">최근 점검 내역</h2>
-          <button class="btn-red" onclick="go('register', document.querySelector('[data-page=register]'))">점검 등록하기 ＋</button>
+          <button class="btn-red" onclick="go('register',document.querySelector('[data-page=register]'))">점검 등록하기 ＋</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -104,8 +106,8 @@
       <section id="p-history" class="page">
         <div class="filter-row">
           <select id="f-building" onchange="renderHistory()"><option value="">전체 건물</option><option>본사</option><option>물류센터1</option><option>물류센터2</option><option>서교동</option></select>
-          <select id="f-status" onchange="renderHistory()"><option value="">전체 상태</option><option>이상없음</option><option>수리필요</option><option>긴급</option></select>
-          <button class="btn-outline" onclick="downloadCSV()">⬇ 엑셀용 CSV 다운로드</button>
+          <select id="f-status" onchange="renderHistory()"><option value="">전체 상태</option><option>이상없음</option><option>수리필요</option><option>긴급</option><option>완료</option></select>
+          <button class="btn-outline" onclick="downloadCSV()">⬇ CSV</button>
           <span class="cnt-label" id="hist-cnt"></span>
         </div>
         <div class="table-wrap">
@@ -129,6 +131,14 @@
 
     </main>
     <footer>© 2026 Dasan Books. All rights reserved.</footer>
+
+    <!-- 모바일 하단 탭바 -->
+    <nav id="mobile-nav">
+      <div class="mob-tab on" onclick="go('dashboard',this);setMobTab(this)"><span>🏠</span><span>대시보드</span></div>
+      <div class="mob-tab" onclick="go('register',this);setMobTab(this)"><span>📝</span><span>점검 등록</span></div>
+      <div class="mob-tab" onclick="go('history',this);setMobTab(this)"><span>📋</span><span>점검 이력</span></div>
+      <div class="mob-tab" onclick="go('repairs',this);setMobTab(this)"><span>🔧</span><span>처리/수정</span></div>
+    </nav>
   </div>
 </div>
 
@@ -144,14 +154,36 @@
   </div>
 </div>
 
+<!-- 완료 처리 모달 -->
+<div id="done-modal" class="mo-back" onclick="if(event.target===this)closeDoneModal()">
+  <div class="mo-box" style="max-width:400px">
+    <div class="mo-head">
+      <span class="mo-title">✅ 완료 처리</span>
+      <button class="mo-close" onclick="closeDoneModal()">×</button>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label class="fl">완료일 <span class="req">*</span></label>
+      <input type="date" id="done-date-input" style="width:100%;padding:9px 12px;font-size:13px;border:1px solid #ddd;border-radius:8px;outline:none;font-family:inherit">
+    </div>
+    <div class="fg" style="margin-bottom:16px">
+      <label class="fl">후속상황 / 처리내용</label>
+      <textarea id="done-note-input" rows="4" placeholder="수리 완료 내용, 업체명, 비용, 특이사항 등을 입력하세요" style="width:100%;padding:9px 12px;font-size:13px;border:1px solid #ddd;border-radius:8px;outline:none;font-family:inherit;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="done-modal-save" class="btn-red" style="flex:1">완료 처리</button>
+      <button class="btn-outline" onclick="closeDoneModal()">취소</button>
+    </div>
+  </div>
+</div>
+
 <!-- 관리자 로그인 모달 -->
 <div id="admin-modal" class="mo-back" onclick="if(event.target===this)closeAdminLogin()">
-  <div class="mo-box" style="max-width:360px">
+  <div class="mo-box" style="max-width:340px">
     <div class="mo-head">
       <span class="mo-title">🔐 관리자 로그인</span>
       <button class="mo-close" onclick="closeAdminLogin()">×</button>
     </div>
-    <p style="font-size:13px;color:#888;margin-bottom:16px">관리자 비밀번호를 입력하세요.</p>
+    <p style="font-size:13px;color:#888;margin-bottom:14px">관리자 비밀번호를 입력하세요.</p>
     <input type="password" id="admin-pw" placeholder="비밀번호" style="width:100%;padding:10px 12px;font-size:14px;border:1px solid #ddd;border-radius:8px;outline:none;font-family:inherit;margin-bottom:8px">
     <p id="admin-pw-err" style="display:none;font-size:12px;color:#C8001E;margin-bottom:8px">❌ 비밀번호가 틀렸습니다.</p>
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -161,6 +193,16 @@
   </div>
 </div>
 
+<script>
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('mob-open');
+}
+function setMobTab(el) {
+  document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('sidebar').classList.remove('mob-open');
+}
+</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
