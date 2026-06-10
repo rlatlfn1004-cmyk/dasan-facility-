@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── 실시간 데이터 ──────────────────────────────────────────
-onSnapshot(query(inspectionsRef, orderBy("createdAt", "desc")), (snap) => {
+onSnapshot(query(inspectionsRef, orderBy("date", "desc"), orderBy("createdAt", "desc")), (snap) => {
   allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   renderAll();
   updateNoti();
