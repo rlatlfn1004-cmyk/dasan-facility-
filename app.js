@@ -137,7 +137,8 @@ window.renderHistory = function() {
         <td>${i.building||'-'}</td><td>${i.date||'-'}</td><td>${i.author||'-'}</td>
         <td>${i.zone||'-'}</td>
         <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.content||''}</td>
-        <td>${i.memo||'-'}</td><td>${badgeHtml(i.status)}</td>
+        <td style="font-size:12px;color:#555;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.doneNote || i.memo || '-'}</td>
+        <td>${badgeHtml(i.status)}${i.doneDate ? '<br><span style="font-size:10px;color:#888;font-weight:500">'+i.doneDate+'</span>' : ''}</td>
         <td><button class="btn-sm" onclick="event.stopPropagation();showDetail('${i.id}')">상세</button></td>
       </tr>`).join('')
     : `<tr class="empty-row"><td colspan="8">내역이 없습니다</td></tr>`;
