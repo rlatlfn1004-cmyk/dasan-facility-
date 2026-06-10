@@ -12,7 +12,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 
 footer { text-align: center; font-size: 12px; color: #bbb; padding: 14px; border-top: 1px solid #eee; background: #fff; }
 
 /* ── 사이드바 ── */
-.sb-logo { padding: 24px 20px 20px; font-size: 24px; font-weight: 400; border-bottom: 1px solid #f0f0f0; }
+.sb-logo { padding: 24px 20px 20px; font-size: 28px; font-weight: 700; border-bottom: 1px solid #f0f0f0; text-align: center; }
 .logo-dasan { color: #C8001E; font-style: normal; font-family: 'Pacifico', cursive; }
 .logo-books { color: #C8001E; font-style: normal; font-family: 'Pacifico', cursive; }
 
